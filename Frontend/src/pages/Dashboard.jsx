@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react'; import {Link} from 'react-router-dom'; import api from '../services/api'; import {LockKeyhole,Target,Star,ShieldCheck,Heart,Fish,QrCode,Siren,Database,ShieldAlert} from 'lucide-react';
+import {useEffect,useState} from 'react'; import {Link} from 'react-router-dom'; import api,{apiBase} from '../services/api'; import {LockKeyhole,Target,Star,ShieldCheck,Heart,Fish,QrCode,Siren,Database,ShieldAlert} from 'lucide-react';
 const NAMES=['Phishing Trap','Digital Defense','QR & Message Scams','Data Protection','Incident Commander'];
 const MISSION_ICON=[Fish,QrCode,Siren,Database,ShieldAlert];
 const CHALLENGE_LABEL={phishing:'Phishing',password:'Passwords',qr:'Fake QR',scam:'Scam Msgs',other:'Security'};
@@ -8,7 +8,13 @@ export default function Dashboard(){
   useEffect(()=>{
     api.get('/game/levels')
       .then(r=>setLevels(r.data.levels||[]))
-      .catch(()=>setError('Could not load missions. Is the backend running on '+(import.meta.env.VITE_API_URL||'http://localhost:5000/api')+'?'))
+      .catch(e=>{
+        const status=e.response?.status;
+        const serverMsg=e.response?.data?.message;
+        setError(status===404
+          ? `API 404 at ${apiBase}/game/levels. VITE_API_URL must end with /api (e.g. https://<app>.onrender.com/api) — fix it in Vercel env vars and Redeploy.${serverMsg?' Server says: '+serverMsg:''}`
+          : `Could not load missions (HTTP ${status||'network error'}). Backend: ${apiBase}. ${serverMsg||'Check the backend is awake (Render free tier sleeps) and CLIENT_URL includes your Vercel domain.'}`);
+      })
       .finally(()=>setLoading(false));
   },[]);
   return <>

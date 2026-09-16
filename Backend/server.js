@@ -46,6 +46,7 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeade
 app.use('/api/auth', authLimiter);
 
 app.get('/', (_, res) => res.json({ status: 'ok', service: 'CyberEscape API', docs: '/api/health' }));
+app.get('/api', (_, res) => res.json({ status: 'ok', service: 'CyberEscape API', endpoints: ['/api/health', '/api/auth/register', '/api/auth/login', '/api/auth/me', '/api/game/levels', '/api/game/questions/:level', '/api/game/sessions', '/api/leaderboard', '/api/analytics/me'] }));
 app.get('/api/health', (_, res) => res.json({
   status: 'ok',
   service: 'CyberEscape API',
