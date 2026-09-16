@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
 import connectDB from './config/db.js';
+import { autoSeedIfEmpty } from './seed/seed.js';
 import authRoutes from './routes/authRoutes.js';
 import gameRoutes from './routes/gameRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
@@ -16,7 +17,9 @@ const isProd = process.env.NODE_ENV === 'production';
 if (!process.env.JWT_SECRET) console.warn('WARNING: JWT_SECRET is not set. Copy .env.example to .env first.');
 if (!process.env.MONGO_URI) console.warn('WARNING: MONGO_URI is not set. Copy .env.example to .env first.');
 
-await connectDB().catch((e) => {
+await connectDB().then(async () => {
+  await autoSeedIfEmpty();
+}).catch((e) => {
   console.error('MongoDB connection failed:', e.message);
   console.error('Hint: copy .env.example to .env and set MONGO_URI, then run npm run seed');
 });
@@ -26,16 +29,25 @@ app.set('trust proxy', 1);
 app.use(helmet());
 const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
-  .map((s) => s.trim())
+  .map((s) => s.trim().replace(/\/+$/, ''))
   .filter(Boolean);
+
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error('CORS blocked for origin ' + origin));
+    const cleanOrigin = origin.replace(/\/+$/, '');
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (allowed === '*') return true;
+      if (allowed === cleanOrigin) return true;
+      if (cleanOrigin.endsWith('.vercel.app')) return true;
+      return false;
+    });
+    if (isAllowed) return cb(null, true);
+    return cb(null, false);
   },
   credentials: true,
 }));
+
 app.use(express.json({ limit: '1mb' }));
 if (!isProd) app.use(morgan('dev'));
 else app.use(morgan('combined'));
